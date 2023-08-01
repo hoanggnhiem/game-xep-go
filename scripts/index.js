@@ -1,3 +1,4 @@
+/*** CONSTANT ***/
 const COLS = 10;
 const ROWS = 20;
 const BLOCK_SIZE = 30;
@@ -180,14 +181,14 @@ const BRICK_LAYOUT = [
 const KEY_CODES = {
   LEFT: "ArrowLeft",
   RIGHT: "ArrowRight",
-  up: "ArrowUp",
-  Down: "ArrowDown",
+  UP: "ArrowUp",
+  DOWN: "ArrowDown",
 };
 
 const WHITE_COLOR_ID = 7;
 
 const canvas = document.getElementById("board");
-const ctx = canvas.getContext("2D");
+const ctx = canvas.getContext("2d");
 
 ctx.canvas.width = COLS * BLOCK_SIZE;
 ctx.canvas.height = ROWS * BLOCK_SIZE;
@@ -198,7 +199,9 @@ class Board {
     this.grid = this.generateWhiteBoard();
     this.score = 0;
     this.gameOver = false;
-    this.iplaying = false;
+    this.isPlaying = false;
+
+    this.clearAudio = new Audio("../sounds/clear.wav");
   }
 
   reset() {
@@ -212,7 +215,8 @@ class Board {
     return Array.from({ length: ROWS }, () => Array(COLS).fill(WHITE_COLOR_ID));
   }
 
-  drawCell(xAxis, yAxis, colorID) {
+  drawCell(xAxis, yAxis, colorId) {
+    // xAxis => 1 yAxis => 1
     this.ctx.fillStyle =
       COLOR_MAPPING[colorId] || COLOR_MAPPING[WHITE_COLOR_ID];
     this.ctx.fillRect(
@@ -222,7 +226,7 @@ class Board {
       BLOCK_SIZE
     );
     this.ctx.fillStyle = "black";
-    this.ctx.strockeRect(
+    this.ctx.strokeRect(
       xAxis * BLOCK_SIZE,
       yAxis * BLOCK_SIZE,
       BLOCK_SIZE,
@@ -232,18 +236,19 @@ class Board {
 
   drawBoard() {
     for (let row = 0; row < this.grid.length; row++) {
-      for (let col = o; col < this.grid[0].length; col++) {
+      for (let col = 0; col < this.grid[0].length; col++) {
         this.drawCell(col, row, this.grid[row][col]);
       }
     }
   }
 
   handleCompleteRows() {
-    const latestDrid = board.grid.filter((row) => {
+    const latestGrid = board.grid.filter((row) => {
+      // row => []
       return row.some((col) => col === WHITE_COLOR_ID);
     });
 
-    const newScore = ROWS - latestGrid.length;
+    const newScore = ROWS - latestGrid.length; // => newScore = tong cong hang da hoan thanh
     const newRows = Array.from({ length: newScore }, () =>
       Array(COLS).fill(WHITE_COLOR_ID)
     );
@@ -251,9 +256,12 @@ class Board {
     if (newScore) {
       board.grid = [...newRows, ...latestGrid];
       this.handleScore(newScore * 10);
-      console.log({ latetsGrid });
+
+      this.clearAudio.play();
+      console.log({ latestGrid });
     }
   }
+
   handleScore(newScore) {
     this.score += newScore;
     document.getElementById("score").innerHTML = this.score;
@@ -262,7 +270,7 @@ class Board {
   handleGameOver() {
     this.gameOver = true;
     this.isPlaying = false;
-    alert("Game Over!!!");
+    alert("GAME OVER!!!");
   }
 }
 
@@ -271,7 +279,7 @@ class Brick {
     this.id = id;
     this.layout = BRICK_LAYOUT[id];
     this.activeIndex = 0;
-    this.colPos = 4;
+    this.colPos = 3;
     this.rowPos = -2;
   }
 
@@ -279,7 +287,7 @@ class Brick {
     for (let row = 0; row < this.layout[this.activeIndex].length; row++) {
       for (let col = 0; col < this.layout[this.activeIndex][0].length; col++) {
         if (this.layout[this.activeIndex][row][col] !== WHITE_COLOR_ID) {
-          board.drawCell(col + thí.colPos, row + thí.rowPos, this.id);
+          board.drawCell(col + this.colPos, row + this.rowPos, this.id);
         }
       }
     }
@@ -289,7 +297,7 @@ class Brick {
     for (let row = 0; row < this.layout[this.activeIndex].length; row++) {
       for (let col = 0; col < this.layout[this.activeIndex][0].length; col++) {
         if (this.layout[this.activeIndex][row][col] !== WHITE_COLOR_ID) {
-          board.drawCell(col + thí.colPos, row + thí.rowPos, WHITE_COLOR_ID);
+          board.drawCell(col + this.colPos, row + this.rowPos, WHITE_COLOR_ID);
         }
       }
     }
@@ -320,14 +328,6 @@ class Brick {
       this.clear();
       this.colPos++;
       this.draw();
-
-      return;
-    }
-
-    this.handleLanded();
-
-    if (board.gameOver) {
-      generateNewBrick();
     }
   }
 
@@ -342,28 +342,47 @@ class Brick {
       this.clear();
       this.rowPos++;
       this.draw();
+
+      return;
     }
+
+    this.handleLanded();
+    generateNewBrick();
   }
 
   rotate() {
-    if (!this.checkCollision(this.rowPos, this.colPos)) {
+    if (
+      !this.checkCollision(
+        this.rowPos,
+        this.colPos,
+        this.layout[(this.activeIndex + 1) % 4]
+      )
+    ) {
       this.clear();
       this.activeIndex = (this.activeIndex + 1) % 4;
+      /**
+       * activeindex = 0
+       * 0 + 1 = 1 % 4 ==> 1
+       *
+       * activeIndex = 3
+       * 3 + 1 = 4 % 4 ==> 0
+       *
+       * **/
       this.draw();
     }
   }
 
   checkCollision(nextRow, nextCol, nextLayout) {
-    //if (nextCol < 0) return true;
+    // if (nextCol < 0) return true;
 
-    for (let row = 0; row < nextLayout.length; col++) {
+    for (let row = 0; row < nextLayout.length; row++) {
       for (let col = 0; col < nextLayout[0].length; col++) {
         if (nextLayout[row][col] !== WHITE_COLOR_ID && nextRow >= 0) {
           if (
             col + nextCol < 0 ||
             col + nextCol >= COLS ||
             row + nextRow >= ROWS ||
-            board.grid[row + nextRow][col + nextCol !== WHITE_COLOR_ID]
+            board.grid[row + nextRow][col + nextCol] !== WHITE_COLOR_ID
           )
             return true;
         }
@@ -379,8 +398,8 @@ class Brick {
       return;
     }
 
-    for (let row = 0; row < nextLayout.length; col++) {
-      for (let col = 0; col < nextLayout[0].length; col++) {
+    for (let row = 0; row < this.layout[this.activeIndex].length; row++) {
+      for (let col = 0; col < this.layout[this.activeIndex][0].length; col++) {
         if (this.layout[this.activeIndex][row][col] !== WHITE_COLOR_ID) {
           board.grid[row + this.rowPos][col + this.colPos] = this.id;
         }
@@ -393,7 +412,7 @@ class Brick {
 }
 
 function generateNewBrick() {
-  brick = new Brick(Math.floor(Math.random() * 10) % BRICK_LAYOUT.length);
+  brick = new Brick(Math.floor(Math.random() * 10) % BRICK_LAYOUT.length); // tao ra 1 id bat ki nam tu 0 -> 6
 }
 
 board = new Board(ctx);
@@ -420,25 +439,25 @@ document.addEventListener("keydown", (e) => {
     console.log({ e });
     switch (e.code) {
       case KEY_CODES.LEFT:
-        Brick.moveLeft;
+        brick.moveLeft();
         break;
       case KEY_CODES.RIGHT:
-        Brick.moveRight;
-        break;
-      case KEY_CODES.UP:
-        Brick.moveUp;
+        brick.moveRight();
         break;
       case KEY_CODES.DOWN:
-        Brick.moveDown;
+        brick.moveDown();
+        break;
+      case KEY_CODES.UP:
+        brick.rotate();
         break;
       default:
         break;
     }
   }
 });
-// Brick.moveLeft();
-// Brick.moveRight();
-// Brick.moveDown();
+// brick.moveLeft();
+// brick.moveDown();
+// brick.moveRight();
 // board.drawCell(1, 1, 1);
 
-console.table(board);
+console.table(board.grid);
